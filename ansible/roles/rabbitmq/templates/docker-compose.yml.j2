@@ -1,0 +1,15 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4.2.5-management
+    hostname: "{{ inventory_hostname }}"
+    container_name: rabbitmq
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "{{ rabbitmq_erlang_cookie }}"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+
+volumes:
+  rabbitmq_data:

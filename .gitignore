@@ -1,0 +1,12 @@
+# Terraform
+.terraform/
+terraform/.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+*.tfplan
+
+# Claude Code
+.claude/
+
+# Ansible vault (unencrypted)
+ansible/group_vars/all/vault.yml

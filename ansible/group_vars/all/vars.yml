@@ -1,0 +1,3 @@
+---
+# Non-secret defaults
+rabbitmq_image: "rabbitmq:4.2.5-management"

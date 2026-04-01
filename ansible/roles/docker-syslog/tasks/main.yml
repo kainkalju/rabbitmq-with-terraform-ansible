@@ -1,0 +1,77 @@
+---
+- name: Overwrite rsyslog.conf
+  ansible.builtin.copy:
+    src: rsyslog.conf
+    dest: /etc/rsyslog.conf
+    mode: "0644"
+  notify: Restart rsyslog
+
+- name: Create /var/log/docker directory
+  ansible.builtin.file:
+    path: /var/log/docker
+    state: directory
+    owner: syslog
+    group: adm
+    mode: "0755"
+
+- name: Add rsyslog rule for Docker container logs
+  ansible.builtin.copy:
+    src: 20-docker.conf
+    dest: /etc/rsyslog.d/20-docker.conf
+    mode: "0644"
+  notify: Restart rsyslog
+
+- name: Add rsyslog socket input for Docker containers
+  ansible.builtin.copy:
+    src: 10-socket-for-containers.conf
+    dest: /etc/rsyslog.d/10-socket-for-containers.conf
+    mode: "0644"
+  notify: Restart rsyslog
+
+- name: Install docker-dev-log.socket systemd unit
+  ansible.builtin.copy:
+    src: docker-dev-log.socket
+    dest: /lib/systemd/system/docker-dev-log.socket
+    mode: "0644"
+  register: socket_unit
+
+- name: Reload-or-restart rsyslog and docker-dev-log.socket
+  ansible.builtin.command:
+    cmd: systemctl reload-or-restart rsyslog docker-dev-log.socket
+  when: socket_unit.changed
+
+- name: Enable docker-dev-log.socket
+  ansible.builtin.systemd:
+    name: docker-dev-log.socket
+    enabled: true
+  when: socket_unit.changed
+
+- name: Configure Docker daemon to use syslog log driver
+  ansible.builtin.copy:
+    src: daemon.json
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+  notify: Restart docker
+
+- name: Install logrotate config for Docker logs
+  ansible.builtin.copy:
+    src: logrotate/rsyslog-docker
+    dest: /etc/logrotate.d/rsyslog-docker
+    mode: "0644"
+
+- name: Check if /etc/cron.daily/logrotate exists
+  ansible.builtin.stat:
+    path: /etc/cron.daily/logrotate
+  register: logrotate_daily
+
+- name: Move logrotate from daily to hourly
+  ansible.builtin.command:
+    cmd: mv /etc/cron.daily/logrotate /etc/cron.hourly/logrotate
+  when: logrotate_daily.stat.exists
+
+- name: Install systemd logrotate.timer unit
+  ansible.builtin.copy:
+    src: logrotate/logrotate.timer
+    dest: /etc/systemd/system/logrotate.timer
+    mode: "0644"
+  notify: Reload systemd

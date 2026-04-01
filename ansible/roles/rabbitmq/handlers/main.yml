@@ -1,0 +1,6 @@
+---
+- name: Restart docker-compose@rabbitmq
+  ansible.builtin.systemd:
+    name: docker-compose@rabbitmq
+    state: restarted
+    daemon_reload: true

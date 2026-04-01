@@ -1,0 +1,97 @@
+---
+- name: Add cluster node hostnames to /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: "{{ item.name }}"
+    line: "{{ item.ip }}  {{ item.name }}"
+    state: present
+  loop:
+    - { name: rabbitmq-1, ip: "{{ hostvars['rabbitmq-1'].private_ip }}" }
+    - { name: rabbitmq-2, ip: "{{ hostvars['rabbitmq-2'].private_ip }}" }
+    - { name: rabbitmq-3, ip: "{{ hostvars['rabbitmq-3'].private_ip }}" }
+  become: true
+
+- name: Create RabbitMQ compose directory
+  ansible.builtin.file:
+    path: /etc/docker/compose/rabbitmq
+    state: directory
+    mode: "0755"
+
+- name: Template docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /etc/docker/compose/rabbitmq/docker-compose.yml
+    mode: "0644"
+  notify: Restart docker-compose@rabbitmq
+
+- name: Template rabbitmq.conf
+  ansible.builtin.template:
+    src: rabbitmq.conf.j2
+    dest: /etc/docker/compose/rabbitmq/rabbitmq.conf
+    mode: "0644"
+  notify: Restart docker-compose@rabbitmq
+
+- name: Flush handlers (restart service if compose/conf changed)
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start docker-compose@rabbitmq service
+  ansible.builtin.systemd:
+    name: docker-compose@rabbitmq
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for RabbitMQ to be ready (port 5672)
+  ansible.builtin.wait_for:
+    port: 5672
+    host: "127.0.0.1"
+    delay: 5
+    timeout: 120
+
+# Cluster join — runs only on rabbitmq_nodes (not the seed)
+# Guard: skip if already a member of the cluster
+- name: Check current cluster membership
+  ansible.builtin.command:
+    cmd: docker exec rabbitmq rabbitmqctl cluster_status --formatter json
+  register: cluster_status_raw
+  changed_when: false
+  when: inventory_hostname in groups['rabbitmq_nodes']
+
+- name: Set cluster members fact
+  ansible.builtin.set_fact:
+    already_clustered: >-
+      {{
+        (cluster_status_raw.stdout | from_json).running_nodes
+        | select('search', 'rabbit@rabbitmq-1')
+        | list
+        | length > 0
+      }}
+  when: inventory_hostname in groups['rabbitmq_nodes']
+
+- name: Stop RabbitMQ app for cluster join
+  ansible.builtin.command:
+    cmd: docker exec rabbitmq rabbitmqctl stop_app
+  when:
+    - inventory_hostname in groups['rabbitmq_nodes']
+    - not already_clustered
+
+- name: Reset node before joining
+  ansible.builtin.command:
+    cmd: docker exec rabbitmq rabbitmqctl reset
+  when:
+    - inventory_hostname in groups['rabbitmq_nodes']
+    - not already_clustered
+
+- name: Join cluster at rabbitmq-1
+  ansible.builtin.command:
+    cmd: docker exec rabbitmq rabbitmqctl join_cluster rabbit@rabbitmq-1
+  when:
+    - inventory_hostname in groups['rabbitmq_nodes']
+    - not already_clustered
+
+- name: Start RabbitMQ app after join
+  ansible.builtin.command:
+    cmd: docker exec rabbitmq rabbitmqctl start_app
+  when:
+    - inventory_hostname in groups['rabbitmq_nodes']
+    - not already_clustered

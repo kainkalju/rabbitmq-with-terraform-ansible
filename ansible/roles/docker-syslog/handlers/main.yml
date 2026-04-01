@@ -1,0 +1,14 @@
+---
+- name: Restart docker
+  ansible.builtin.service:
+    name: docker
+    state: restarted
+
+- name: Restart rsyslog
+  ansible.builtin.service:
+    name: rsyslog
+    state: restarted
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true

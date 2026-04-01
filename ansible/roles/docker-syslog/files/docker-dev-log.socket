@@ -1,0 +1,25 @@
+[Unit]
+Description=Syslog Socket for Docker Containers
+Documentation=man:rsyslog.conf(5)
+Documentation=https://www.rsyslog.com/doc/v8-stable/configuration/modules/imuxsock.html
+DefaultDependencies=no
+Before=sockets.target
+
+# Don't allow logging until the very end
+Conflicts=shutdown.target
+Before=shutdown.target
+
+# Don't try to activate syslog.service if sysinit.target has failed.
+Conflicts=emergency.service
+Before=emergency.service
+
+[Socket]
+ListenDatagram=/run/docker/dev-log
+SocketMode=0666
+PassCredentials=yes
+PassSecurity=yes
+ReceiveBuffer=8M
+Service=rsyslog.service
+
+[Install]
+WantedBy=sockets.target

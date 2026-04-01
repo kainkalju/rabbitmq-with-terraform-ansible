@@ -1,0 +1,19 @@
+---
+- name: Install Docker on all RabbitMQ nodes
+  hosts: rabbitmq_all
+  become: true
+  roles:
+    - docker
+
+- name: Configure syslog logging for Docker on all nodes
+  hosts: rabbitmq_all
+  become: true
+  roles:
+    - docker-syslog
+
+- name: Deploy RabbitMQ on all nodes
+  hosts: rabbitmq_all
+  become: true
+  serial: 1          # deploy one node at a time so seed is ready before nodes join
+  roles:
+    - rabbitmq

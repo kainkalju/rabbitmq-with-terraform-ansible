@@ -1,0 +1,18 @@
+# RabbitMQ configuration
+
+# Credentials (replaces deprecated RABBITMQ_DEFAULT_USER/PASS env vars)
+default_user = {{ rabbitmq_user }}
+default_pass = {{ rabbitmq_password }}
+
+# Cluster peer discovery — classic config (manual join via rabbitmqctl)
+cluster_formation.peer_discovery_backend = rabbit_peer_discovery_classic_config
+
+# Memory watermark — pause publishers at 60% of available RAM
+vm_memory_high_watermark.relative = 0.6
+
+# Disk free space limit — 2 GiB
+disk_free_limit.absolute = 2GB
+
+# Log to stdout (captured by Docker)
+log.console = true
+log.console.level = info
