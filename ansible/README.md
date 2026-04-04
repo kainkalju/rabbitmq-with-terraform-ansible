@@ -173,7 +173,7 @@ Ansible controller (local)
 │  eu-north-1a  │   │  eu-north-1b  │   │  eu-north-1c  │
 │               │   │               │   │               │
 │  dockerd      │   │  dockerd      │   │  dockerd      │
-│    │           │   │    │           │   │    │           │
+│    │          │   │    │          │   │    │          │
 │  rabbitmq     │   │  rabbitmq     │   │  rabbitmq     │
 │  container    │   │  container    │   │  container    │
 │    │  logs    │   │    │  logs    │   │    │  logs    │
