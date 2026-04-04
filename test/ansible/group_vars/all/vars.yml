@@ -1,0 +1,3 @@
+---
+queue_name: "test.messages"
+publish_interval_seconds: 1

@@ -1,0 +1,37 @@
+---
+- name: Create rabbitmq-test compose directory
+  ansible.builtin.file:
+    path: /etc/docker/compose/rabbitmq-test
+    state: directory
+    mode: "0755"
+
+- name: Sync producer source
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../producer/"
+    dest: /etc/docker/compose/rabbitmq-test/producer/
+    mode: preserve
+  notify: Restart docker-compose@rabbitmq-test
+
+- name: Sync consumer source
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../consumer/"
+    dest: /etc/docker/compose/rabbitmq-test/consumer/
+    mode: preserve
+  notify: Restart docker-compose@rabbitmq-test
+
+- name: Template docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /etc/docker/compose/rabbitmq-test/docker-compose.yml
+    mode: "0644"
+  notify: Restart docker-compose@rabbitmq-test
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start docker-compose@rabbitmq-test service
+  ansible.builtin.systemd:
+    name: docker-compose@rabbitmq-test
+    enabled: true
+    state: started
+    daemon_reload: true

@@ -1,0 +1,19 @@
+services:
+  producer:
+    build: ./producer
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      QUEUE_NAME: "{{ queue_name }}"
+      PUBLISH_INTERVAL_SECONDS: "{{ publish_interval_seconds }}"
+
+  consumer:
+    build: ./consumer
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      QUEUE_NAME: "{{ queue_name }}"

@@ -1,0 +1,6 @@
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/.terraform.lock.hcl
+terraform/.terraform/
+ansible/inventory/hosts.yml
+ansible/group_vars/all/vault.yml
