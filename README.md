@@ -56,7 +56,8 @@ One node per availability zone. Nodes communicate over private IPs within the VP
 │       ├── docker-syslog/    # rsyslog → /var/log/docker/, hourly logrotate
 │       └── rabbitmq/         # Deploy compose file, cluster join
 └── scripts/
-    └── gen_inventory.py      # Converts terraform output JSON → Ansible inventory
+    ├── gen_inventory.py      # Converts terraform output JSON → Ansible inventory
+    └── gen_pssh_hosts.py     # Converts terraform output JSON → pssh hosts file
 ```
 
 ## Deployment
@@ -112,7 +113,23 @@ ansible-playbook -i inventory/hosts.yml site.yml --ask-vault-pass
 
 Playbook runs in order: `docker` → `docker-syslog` → `rabbitmq` (serial, seed first).
 
-### 5. Verify the cluster
+### 5. Generate pssh hosts file
+
+```bash
+terraform output -json | python3 ../scripts/gen_pssh_hosts.py > ../pssh_hosts
+```
+
+The file contains one `ubuntu@<public-ip>` entry per node. Use it with pssh:
+
+```bash
+pssh -h pssh_hosts -x "-i ~/.ssh/rabbitmq_ed25519 -o StrictHostKeyChecking=no" -i <command>
+
+# Example — check cluster status on all nodes in parallel:
+pssh -h pssh_hosts -x "-i ~/.ssh/rabbitmq_ed25519 -o StrictHostKeyChecking=no" -i \
+  "docker exec rabbitmq rabbitmqctl cluster_status"
+```
+
+### 7. Verify the cluster
 
 ```bash
 ansible rabbitmq_all -i inventory/hosts.yml -m shell \

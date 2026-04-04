@@ -10,3 +10,7 @@ terraform.tfstate.backup
 
 # Ansible vault (unencrypted)
 ansible/group_vars/all/vault.yml
+
+# generated inventory
+ansible/inventory/hosts.yml
+pssh_hosts
