@@ -1,14 +1,15 @@
 resource "aws_instance" "test_client" {
-  ami                         = var.ami_id
+  ami                         = data.aws_ami.ubuntu.id
   instance_type               = var.instance_type
   subnet_id                   = var.subnet_id
   key_name                    = "rabbitmq-key"
   associate_public_ip_address = true
+  iam_instance_profile        = "AmazonSSMManagedInstanceProfile"
 
   vpc_security_group_ids = [
-    var.sg_ssh_enabled,
-    var.sg_from_home,
-    var.sg_ping,
+    data.aws_security_group.ssh_enabled.id,
+    data.aws_security_group.from_home.id,
+    data.aws_security_group.ping.id,
     data.aws_security_group.rabbitmq.id,
   ]
 
