@@ -1,8 +1,15 @@
-# RabbitMQ Producer/Consumer Test Setup
+# RabbitMQ Test Setup
 
 End-to-end test harness for the 3-node RabbitMQ 4.2.5 cluster. Provisions a
 dedicated EC2 Spot test client (Terraform), configures Docker via Ansible, and runs
 Python producer/consumer services in Docker Compose.
+
+Two stacks run independently on the test client:
+
+| Stack | systemd service | What it tests |
+|---|---|---|
+| Basic producer/consumer | `docker-compose@rabbitmq-test` | Durable named queue, manual ack, multi-host failover |
+| Scenarios | `docker-compose@rabbitmq-test-scenarios` | Work Queues, PubSub, Routing, Topics |
 
 ## Architecture
 
@@ -12,6 +19,12 @@ test/
 ├── ansible/        Docker CE + syslog + rabbitmq-test role → Docker Compose
 ├── producer/       Python 3.12 — publishes JSON messages continuously
 ├── consumer/       Python 3.12 — consumes with manual ack, prefetch=1
+├── scenarios/      Python 3.12 — four messaging pattern scenarios
+│   ├── common/         Shared multi-host failover connection helper
+│   ├── s1_work_queues/ Work queues — competing workers, fair dispatch
+│   ├── s2_pubsub/      Publish/subscribe — fanout exchange, temp queues
+│   ├── s3_routing/     Routing — direct exchange, multiple bindings
+│   └── s4_topics/      Topics — wildcard routing key patterns
 └── scripts/        gen_inventory.py — merges test + cluster TF outputs
 ```
 
@@ -54,7 +67,12 @@ ansible-playbook site.yml \
     --vault-password-file ~/.vault_pass
 ```
 
+Both stacks (`rabbitmq-test` and `rabbitmq-test-scenarios`) are deployed and
+started by the same playbook run.
+
 ## Verify
+
+### Basic stack
 
 ```bash
 ssh -i ~/.ssh/rabbitmq_ed25519 ubuntu@<public_ip>
@@ -70,6 +88,23 @@ Expected output:
 [producer] sent #2
 [consumer] received seq=1 from=<hostname> ts=1743771234.123
 ```
+
+### Scenarios stack
+
+```bash
+sudo systemctl status docker-compose@rabbitmq-test-scenarios
+sudo docker compose -f /etc/docker/compose/rabbitmq-test-scenarios/docker-compose.yml ps
+
+# Follow a specific scenario
+sudo docker compose -f /etc/docker/compose/rabbitmq-test-scenarios/docker-compose.yml \
+    logs -f s1-producer s1-worker-1 s1-worker-2 s1-worker-3
+
+# Follow all topic consumers to verify wildcard routing
+sudo docker compose -f /etc/docker/compose/rabbitmq-test-scenarios/docker-compose.yml \
+    logs -f s4-producer s4-consumer-a s4-consumer-b s4-consumer-c
+```
+
+See [scenarios/README.md](scenarios/README.md) for per-scenario verification details.
 
 ## Failover Test
 
@@ -89,7 +124,8 @@ sudo docker compose -f /etc/docker/compose/rabbitmq/docker-compose.yml stop
 - **Security groups** — all four resolved at runtime via `data "aws_security_group"` by name
 - **pika 1.3.2** — uses `auto_ack=False`, `on_message_callback=`, `pika.DeliveryMode.Persistent`
 - **Multi-host failover** — `RABBITMQ_HOSTS` is a comma-separated list; apps cycle through on reconnect
-- **Durable queue** — survives broker restarts
-- **prefetch_count=1** — prevents consumer from buffering all messages locally
+- **Durable queue** — survives broker restarts (named queues in S1 and basic stack)
+- **Temporary queues** — exclusive, server-named, re-created on every reconnect (S2, S3, S4)
+- **prefetch_count=1** — prevents consumers/workers from buffering messages locally
 - **Docker/syslog roles** — symlinked from `../../ansible/roles/`
 - **Separate Terraform state** — fully isolated from cluster state

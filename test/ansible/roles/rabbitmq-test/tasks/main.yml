@@ -35,3 +35,35 @@
     enabled: true
     state: started
     daemon_reload: true
+
+# ── Scenarios ────────────────────────────────────────────────────────────────
+
+- name: Create rabbitmq-test-scenarios compose directory
+  ansible.builtin.file:
+    path: /etc/docker/compose/rabbitmq-test-scenarios
+    state: directory
+    mode: "0755"
+
+- name: Sync scenarios source
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../scenarios/"
+    dest: /etc/docker/compose/rabbitmq-test-scenarios/scenarios/
+    mode: preserve
+  notify: Restart docker-compose@rabbitmq-test-scenarios
+
+- name: Template docker-compose.yml for scenarios
+  ansible.builtin.template:
+    src: docker-compose.scenarios.yml.j2
+    dest: /etc/docker/compose/rabbitmq-test-scenarios/docker-compose.yml
+    mode: "0644"
+  notify: Restart docker-compose@rabbitmq-test-scenarios
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start docker-compose@rabbitmq-test-scenarios service
+  ansible.builtin.systemd:
+    name: docker-compose@rabbitmq-test-scenarios
+    enabled: true
+    state: started
+    daemon_reload: true

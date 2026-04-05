@@ -1,0 +1,173 @@
+services:
+
+  # ── Scenario 1: Work Queues ───────────────────────────────────────────────
+  s1-producer:
+    build:
+      context: ./scenarios
+      dockerfile: s1_work_queues/Dockerfile
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      QUEUE_NAME: "work.tasks"
+      PUBLISH_INTERVAL_SECONDS: "1"
+
+  s1-worker-1:
+    build:
+      context: ./scenarios
+      dockerfile: s1_work_queues/Dockerfile
+    command: ["python", "-u", "worker.py"]
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      QUEUE_NAME: "work.tasks"
+
+  s1-worker-2:
+    build:
+      context: ./scenarios
+      dockerfile: s1_work_queues/Dockerfile
+    command: ["python", "-u", "worker.py"]
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      QUEUE_NAME: "work.tasks"
+
+  s1-worker-3:
+    build:
+      context: ./scenarios
+      dockerfile: s1_work_queues/Dockerfile
+    command: ["python", "-u", "worker.py"]
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      QUEUE_NAME: "work.tasks"
+
+  # ── Scenario 2: Publish/Subscribe ─────────────────────────────────────────
+  s2-producer:
+    build:
+      context: ./scenarios
+      dockerfile: s2_pubsub/Dockerfile
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      EXCHANGE_NAME: "logs"
+      PUBLISH_INTERVAL_SECONDS: "1"
+
+  s2-consumer-1:
+    build:
+      context: ./scenarios
+      dockerfile: s2_pubsub/Dockerfile
+    command: ["python", "-u", "consumer.py"]
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      EXCHANGE_NAME: "logs"
+
+  s2-consumer-2:
+    build:
+      context: ./scenarios
+      dockerfile: s2_pubsub/Dockerfile
+    command: ["python", "-u", "consumer.py"]
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      EXCHANGE_NAME: "logs"
+
+  # ── Scenario 3: Routing / Direct Exchange ─────────────────────────────────
+  s3-producer:
+    build:
+      context: ./scenarios
+      dockerfile: s3_routing/Dockerfile
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      EXCHANGE_NAME: "direct_logs"
+      PUBLISH_INTERVAL_SECONDS: "1"
+
+  s3-consumer-a:
+    build:
+      context: ./scenarios
+      dockerfile: s3_routing/Dockerfile
+    command: ["python", "-u", "consumer_a.py"]
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      EXCHANGE_NAME: "direct_logs"
+
+  s3-consumer-b:
+    build:
+      context: ./scenarios
+      dockerfile: s3_routing/Dockerfile
+    command: ["python", "-u", "consumer_b.py"]
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      EXCHANGE_NAME: "direct_logs"
+
+  # ── Scenario 4: Topics ────────────────────────────────────────────────────
+  s4-producer:
+    build:
+      context: ./scenarios
+      dockerfile: s4_topics/Dockerfile
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      EXCHANGE_NAME: "topic_logs"
+      PUBLISH_INTERVAL_SECONDS: "1"
+
+  s4-consumer-a:
+    build:
+      context: ./scenarios
+      dockerfile: s4_topics/Dockerfile
+    command: ["python", "-u", "consumer_a.py"]
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      EXCHANGE_NAME: "topic_logs"
+
+  s4-consumer-b:
+    build:
+      context: ./scenarios
+      dockerfile: s4_topics/Dockerfile
+    command: ["python", "-u", "consumer_b.py"]
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      EXCHANGE_NAME: "topic_logs"
+
+  s4-consumer-c:
+    build:
+      context: ./scenarios
+      dockerfile: s4_topics/Dockerfile
+    command: ["python", "-u", "consumer_c.py"]
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOSTS: "{{ rabbitmq_hosts | join(',') }}"
+      RABBITMQ_USER: "{{ rabbitmq_user }}"
+      RABBITMQ_PASS: "{{ rabbitmq_password }}"
+      EXCHANGE_NAME: "topic_logs"
