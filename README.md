@@ -39,7 +39,8 @@ One node per availability zone. Nodes communicate over private IPs within the VP
 .
 ├── terraform/
 │   ├── main.tf               # Provider, local backend
-│   ├── variables.tf          # Region, AMI, VPC/subnet IDs, existing SG IDs
+│   ├── variables.tf          # Region, instance type, VPC/subnet IDs, spot price
+│   ├── data.tf               # Data sources: latest Ubuntu AMI, existing SGs by name
 │   ├── security_groups.tf    # New rabbitmq SG for inter-node ports
 │   ├── key_pair.tf           # SSH key pair from ~/.ssh/rabbitmq_ed25519.pub
 │   ├── ec2.tf                # 3x t4g.medium, one per AZ
@@ -71,7 +72,7 @@ terraform plan
 terraform apply
 ```
 
-`terraform plan` should show **5 resources**: 1 security group + 1 key pair + 3 EC2 instances.
+`terraform plan` should show **10 resources to add**: 1 security group + 4 SG rules + 1 key pair + 3 EC2 instances (data sources are read, not counted as additions).
 
 ### 2. Generate Ansible inventory
 
