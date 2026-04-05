@@ -1,15 +1,15 @@
 # RabbitMQ Producer/Consumer Test Setup
 
 End-to-end test harness for the 3-node RabbitMQ 4.2.5 cluster. Provisions a
-dedicated EC2 test client (Terraform), configures Docker via Ansible, and runs
+dedicated EC2 Spot test client (Terraform), configures Docker via Ansible, and runs
 Python producer/consumer services in Docker Compose.
 
 ## Architecture
 
 ```
 test/
-├── terraform/      AWS EC2 t4g.small (arm64, Ubuntu 24.04) — eu-north-1a
-├── ansible/        Docker CE + rabbitmq-test role → Docker Compose
+├── terraform/      AWS EC2 t4g.small Spot (arm64, Ubuntu 24.04) — eu-north-1a
+├── ansible/        Docker CE + syslog + rabbitmq-test role → Docker Compose
 ├── producer/       Python 3.12 — publishes JSON messages continuously
 ├── consumer/       Python 3.12 — consumes with manual ack, prefetch=1
 └── scripts/        gen_inventory.py — merges test + cluster TF outputs
@@ -21,18 +21,12 @@ ingress rules.
 
 ## Usage
 
-> **Before you apply:** the default values in `terraform/variables.tf` contain AWS resource IDs
-> (`vpc_id`, `subnet_id`, `sg_*`) that are specific to the author's AWS account.
-> They do not exist in any other account. Edit `terraform/variables.tf` with your own VPC, subnet,
-> and security group IDs before running any Terraform commands.
->
-> Variables that must be updated:
-> - `vpc_id` — your VPC ID
-> - `subnet_id` — a subnet ID within that VPC (eu-north-1a recommended, same AZ as the seed node)
-> - `sg_ssh_enabled`, `sg_from_home`, `sg_ping` — IDs of your existing security groups
->
-> Also requires the RabbitMQ cluster Terraform (`../terraform`) to have been applied first —
-> the `rabbitmq` security group and `rabbitmq-key` key pair must already exist in AWS.
+> **Before you apply:** `terraform/variables.tf` contains a `vpc_id` and `subnet_id`
+> specific to the author's AWS account. Update these before running Terraform.
+> Security groups (`ssh-enabled`, `from-home`, `ping`, `rabbitmq`) and the
+> `rabbitmq-key` key pair are looked up by name at runtime — they must exist in
+> the target account (i.e. the cluster Terraform in `../terraform` must have been
+> applied first).
 
 ### 1. Provision
 
@@ -90,10 +84,12 @@ sudo docker compose -f /etc/docker/compose/rabbitmq/docker-compose.yml stop
 
 ## Design Notes
 
+- **Spot instance** — persistent, hibernate on interruption, max price `$0.0172/h`; encrypted EBS required for hibernate
+- **AMI** — resolved at runtime via `data "aws_ami"` (latest Ubuntu 24.04 LTS arm64 from Canonical)
+- **Security groups** — all four resolved at runtime via `data "aws_security_group"` by name
 - **pika 1.3.2** — uses `auto_ack=False`, `on_message_callback=`, `pika.DeliveryMode.Persistent`
 - **Multi-host failover** — `RABBITMQ_HOSTS` is a comma-separated list; apps cycle through on reconnect
 - **Durable queue** — survives broker restarts
 - **prefetch_count=1** — prevents consumer from buffering all messages locally
-- **Vault symlink** — `ansible/group_vars/all/vault.yml` → `../../ansible/group_vars/all/vault.yml`
-- **Docker role symlink** — `ansible/roles/docker` → `../../ansible/roles/docker`
+- **Docker/syslog roles** — symlinked from `../../ansible/roles/`
 - **Separate Terraform state** — fully isolated from cluster state
